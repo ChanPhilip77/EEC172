@@ -99,49 +99,34 @@ ConfigureUART(void)
     UARTStdioConfig(0, 115200, 16000000);
 }
 
-//*****************************************************************************
-//
-// Print "Hello World!" to the UART on the evaluation board.
-//
-//*****************************************************************************
 int main(void)
 {
-    //volatile uint32_t ui32Loop;
+    // initialize inputs and outputs
     int sw_input;
     int leds;
     int main_light = 3; // green
     int side_light = 1; // red
     int cross_walk = 1; // don't walk
+    // initialize flags
     int pushed = 0;
     int walk_flag = 0;
     int extend_flag = 0;
     
     //
-    // Enable lazy stacking for interrupt handlers.  This allows floating-point
-    // instructions to be used within interrupt handlers, but at the expense of
-    // extra stack usage.
-    //
+    // Enable lazy stacking for interrupt handlers.
     ROM_FPULazyStackingEnable();
 
-    //
     // Set the clocking to run directly from the crystal.
-    //
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
-                       SYSCTL_OSC_MAIN);
+    ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ | SYSCTL_OSC_MAIN);
 
-    //
     // Enable the GPIO port that is used for the on-board LED.
-    //
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-
 
     HWREG(GPIO_PORTF_BASE + GPIO_O_LOCK) = GPIO_LOCK_KEY;
     HWREG(GPIO_PORTF_BASE + GPIO_O_CR) |= 0x01;
     HWREG(GPIO_PORTF_BASE + GPIO_O_LOCK) = 0;
         
-    //
-    // Enable the GPIO pins for the LED (PF2 & PF3).
-    //
+    // Configure the switches as inputs
     ROM_GPIOPinTypeGPIOInput(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4); // PF0, PF4 = switches
 
         // Need pull-up resistors on switch inputs
@@ -149,11 +134,11 @@ int main(void)
     
    ROM_GPIOPadConfigSet(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4, GPIO_STRENGTH_8MA, GPIO_PIN_TYPE_STD_WPU);
 
-    // Configure PF1 (Red LED), PF2 (Blue LED) and PF3 (Green LED) as outputs
+    // Configure the LEDs as outputs
 
     ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
 
-    // initialize to red
+    // initialize to LED red
     ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_1);
 
     // Initialize the UART.
@@ -164,15 +149,18 @@ int main(void)
 
 
     while(1)
-    {               
+    {   
+        // Print default status and LED red
         UARTprintf("Main: Green     Side: Red      Pedestrian: Don't Walk\n");
         ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
-        for (int i=0;i<300;i++) // loop for 15s
+        
+        // Loop while waiting for input
+        for (int i=0;i<300;i++) // loop for 15s minimum
         {
             sw_input = ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4); // check switches
-            if ((sw_input & 0x11) != 0x11) // check switches
+            if ((sw_input & 0x11) != 0x11) // check if any switch is pressed
             {
-                if (pushed !=1)
+                if (pushed !=1) // if flag not set:
                 {
                     pushed = 1; // set flag
                     if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4)) == 0x10) // check if sw2 pushed
@@ -180,17 +168,18 @@ int main(void)
                         walk_flag = 1;
                         UARTprintf("switch 2 detected\n");
                     }
-                    else
+                    else // assume switch 1 pressed
                         UARTprintf("switch 1 detected\n");
                 }
             }
-                ROM_SysCtlDelay(SysCtlClockGet()/3/20); // delay 0.05s
+            ROM_SysCtlDelay(SysCtlClockGet()/3/20); // delay 0.05s: checks for input every 0.05s
         }
-            
-        while (pushed == 0) // if not pushed yet, wait until pushed
+        
+        // if switch not pushed yet, wait pushed to change state
+        while (pushed == 0)
         {
             sw_input = ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4); // check switches
-            if ((sw_input & 0x11) != 0x11) // check switches
+            if ((sw_input & 0x11) != 0x11) // check if any switch is pressed
             {
                 pushed = 1; // set flag
                 if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4)) == 0x10) // check if sw2 pushed
@@ -204,17 +193,17 @@ int main(void)
                 }
             }
         }
-                        
-                        
+
+        // change Main street from green to red
         main_light = 4; // change to yellow
         UARTprintf("Main: Yellow    Side: Red         Pedestrian: Don't Walk\n");
-        ROM_SysCtlDelay(SysCtlClockGet()); // delay 3 seconds
+        ROM_SysCtlDelay(SysCtlClockGet()); // Stay yellow 3 seconds
                         
         main_light = 1; // change to red
         UARTprintf("Main: Red       Side: Red      Pedestrian: Don't Walk\n");
-        ROM_SysCtlDelay(SysCtlClockGet() /3/2); // delay half a second
+        ROM_SysCtlDelay(SysCtlClockGet() /3/2); // Stay red for half a second
                         
-                        
+        // Pedestrian walking 
         if (walk_flag == 1)
         {
             ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, 0);
@@ -233,7 +222,7 @@ int main(void)
             UARTprintf("Main: Red       Side: Red      Pedestrian: Don't Walk\n");
             ROM_SysCtlDelay(SysCtlClockGet() /3/2); //Delay 0.5s
         }
-        else
+        else  // Only side cars crossing
         {
             ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, 0);
             ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3, GPIO_PIN_3);  // led green
