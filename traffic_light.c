@@ -227,34 +227,35 @@ int main(void)
             ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, 0);
             ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3, GPIO_PIN_3);  // led green
             UARTprintf("Main: Red       Side: Green      Pedestrian: Don't Walk\n");
+            // Green for 5s unless extended
             for (int i=0;i<100;i++) // loop for 5s
             {
                 sw_input = ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4); // check switches
-                if ((sw_input & 0x11) != 0x11) // check switches
+                if ((sw_input & 0x11) != 0x11) // check if switches pushed
                 {
                     if (extend_flag != 1)
                     {
-                        if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) == 0x01) // check if sw2 pushed
+                        if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) == 0x01) // check if sw1 pushed
                         {    
-                            extend_flag = 1;
+                            extend_flag = 1; // set flag to extend 5s
                             UARTprintf("switch 1 detected\n");
                         }
                     }
                 }
                 ROM_SysCtlDelay(SysCtlClockGet()/3/20); // delay 0.05s
             }
-                                
-            if (extend_flag == 1)
+            
+            if (extend_flag == 1) // extend 5s once
             {
-                extend_flag = 0;
-                for (int i=0;i<100;i++) // loop for 15s
+                extend_flag = 0; // reset extension flag
+                for (int i=0;i<100;i++) // loop for 5s
                 {
                     sw_input = ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4); // check switches
                     if ((sw_input & 0x11) != 0x11) // check switches
                     {
                         if (extend_flag != 1)
                         {
-                            if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) == 0x01) // check if sw2 pushed
+                            if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) == 0x01) // check if sw1 pushed
                             {    
                                 extend_flag = 1;
                                 UARTprintf("switch 1 detected again\n");
@@ -265,17 +266,17 @@ int main(void)
                 }
             }
                                 
-            if (extend_flag == 1)
+            if (extend_flag == 1) // extend another 5s
             {
-                extend_flag = 0;
-                for (int i=0;i<100;i++) // loop for 15s
+                extend_flag = 0; // reset extension flag
+                for (int i=0;i<100;i++) // loop for 5s
                 {
                     sw_input = ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0 | GPIO_PIN_4); // check switches
                     if ((sw_input & 0x11) != 0x11) // check switches
                     {
                         if (extend_flag != 1)
                         {
-                            if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) == 0x01) // check if sw2 pushed
+                            if ((ROM_GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0)) == 0x01) // check if sw1 pushed
                             {    
                                 extend_flag = 1;
                                 UARTprintf("switch 1 detected, no extension\n");
@@ -285,7 +286,9 @@ int main(void)
                     ROM_SysCtlDelay(SysCtlClockGet()/3/20); // delay 0.05s
                 }
             }
-                                
+            
+            
+            // Transition side from green to red
             ROM_GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1); // led yellow
             UARTprintf("Main: Red       Side: Yellow      Pedestrian: Don't Walk\n");
             ROM_SysCtlDelay(SysCtlClockGet()); //Delay 3s
@@ -294,8 +297,9 @@ int main(void)
             ROM_SysCtlDelay(SysCtlClockGet() / 3/2); // delay 1/2 seconds
                                  
         }
-                        
-                        
+        
+        // reset all flags
+        extend_flag = 0;
         walk_flag = 0;
         pushed = 0;
                         
