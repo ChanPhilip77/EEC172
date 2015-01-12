@@ -21,6 +21,8 @@
 // This is part of revision 2.1.0.12573 of the EK-TM4C123GXL Firmware Package.
 //
 //*****************************************************************************
+//
+// By Thien Nguyen and Philip Chan
 
 #include <stdint.h>
 #include <stdbool.h>
